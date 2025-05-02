@@ -483,6 +483,39 @@ async def add_litellm_data_to_request(  # noqa: PLR0915
         ),
     )
 
+    # Propagate headers to LLM provider
+    if "model" in data:
+        model_name = data["model"]
+        # get model info from llm_router
+        model_info = None
+        if llm_router and llm_router.model_list:
+            for deployment in llm_router.model_list:
+                if isinstance(deployment, dict):
+                    if deployment.get("model_name") == model_name and deployment.get("model_info"):
+                        model_info = deployment["model_info"]
+                        break
+                else:
+                    if deployment.model_name == model_name and deployment.model_info:
+                        model_info = deployment.model_info
+                        break
+        
+        # If there are headers to propagate, extract them from the request
+        propagate_headers = None
+        if model_info:
+            if isinstance(model_info, dict):
+                propagate_headers = model_info.get("propagate_headers")
+            else:
+                propagate_headers = getattr(model_info, "propagate_headers", None)
+            
+        if propagate_headers:
+            if "headers" not in data:
+                data["headers"] = {}
+            headers_dict = dict(request.headers)
+            for header in propagate_headers:
+                if header in headers_dict:
+                    data["headers"][header] = headers_dict[header]
+                    verbose_proxy_logger.debug(f"Propagating http header {header} to LLM provider")
+
     data.update(
         LiteLLMProxyRequestSetup.add_litellm_data_for_backend_llm_call(
             headers=_headers,
