@@ -108,6 +108,10 @@ class ModelInfo(BaseModel):
     ] = None  # specify if the base model is azure/gpt-3.5-turbo etc for accurate cost tracking
     tier: Optional[Literal["free", "paid"]] = None
 
+    # List of http headers to propagate to the LLM provider
+    # e.g. ["x-api-key", "x-organization"]
+    propagate_headers: Optional[List[str]] = Field(default=None, description="List of http headers to propagate to the LLM provider")
+
     """
     Team Model Specific Fields
     """
